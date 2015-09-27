@@ -192,6 +192,7 @@ class CSVWriter(Writer):
     def write(self, d):
         self.writer.writerow(d)
 
+
 class Progress:
 
     def __init__(self, begin, end):
@@ -211,12 +212,15 @@ class Progress:
 
 
 def parse_args():
-    p = argparse.ArgumentParser()
-    p.add_argument('subreddits', nargs='+')
-    p.add_argument('time')
-    p.add_argument(
-        '-c', '--out-comment', nargs='?', const='comments.csv', default='')
-    p.add_argument('-s', '--out-submission', default='submissions.csv')
+    p = argparse.ArgumentParser(
+        description='A tool downloads reddit\'s submissions and comments')
+    p.add_argument('subreddit', nargs='+', help='target subreddits')
+    p.add_argument('time',
+                   help='submission period (example: "2015-09-08", "2015-09-02,2015-09-12")')
+    p.add_argument('-c', '--comment', nargs='?', const='comments.csv', default='', metavar='FILE',
+                   help='file stores comments data. If not provided, it is not requested. If FILE not provided, default file is "%(const)s". If suffix is not ".csv", output format is jsonlines.')
+    p.add_argument('-s', '--submission', default='submissions.csv', metavar='FILE',
+                   help='file stores submissions data. (default: "%(default)s"). If suffix is not ".csv", output format is jsonlines.')
 
     a = p.parse_args()
     return a
@@ -233,9 +237,9 @@ def main():
     else:
         begin, end = arrow.get(time, 'YYYY-MM-DD').span('day')
 
-    subreddits = args.subreddits
-    c_out_file = args.out_comment
-    s_out_file = args.out_submission
+    subreddits = args.subreddit
+    c_out_file = args.comment
+    s_out_file = args.submission
 
     s_file = open(s_out_file, 'w', encoding='utf-8', newline='')
     if c_out_file:
