@@ -73,7 +73,6 @@ def submission_to_dict(subm):
         ret[a] = getattr(subm, a)
 
     ret['subreddit'] = subm.subreddit.display_name
-    ret['subreddit_id'] = subm.subreddit.id
     ret['author'] = subm.author.name
 
     return ret
@@ -104,7 +103,6 @@ submission_keys = sorted([
     'selftext_html',
     'stickied',
     'subreddit',
-    'subreddit_id',
     'thumbnail',
     'title',
     'url',
@@ -142,10 +140,8 @@ def comment_to_dict(comm):
     ret['link_title'] = subm.title
     ret['link_url'] = subm.url
     ret['subreddit'] = subm.subreddit.display_name
-    ret['subreddit_id'] = subm.subreddit.id
 
     ret['author'] = comm.author.name if comm.author else None
-
     return ret
 
 comment_keys = sorted([
@@ -172,7 +168,6 @@ comment_keys = sorted([
     'score',
     'score_hidden',
     'subreddit',
-    'subreddit_id',
 ])
 
 
