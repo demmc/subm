@@ -241,9 +241,9 @@ def main():
     c_out_file = args.out_comment
     s_out_file = args.out_submission
 
-    s_file = open(s_out_file, 'w', encoding='utf-8')
+    s_file = open(s_out_file, 'w', encoding='utf-8', newline='')
     if c_out_file:
-        c_file = open(c_out_file, 'w', encoding='utf-8')
+        c_file = open(c_out_file, 'w', encoding='utf-8', newline='')
     else:
         c_file = open(os.devnull, 'w')
 
