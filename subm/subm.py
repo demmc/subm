@@ -118,29 +118,28 @@ def comment_to_dict(comm):
     return ret
 
 
-def out_submissions(subms, filename):
-    with open(filename, 'w', encoding='utf-8') as f:
-        for subm in subms:
-            d = submission_to_dict(subm)
-            j = json.dumps(d)
-            print(j, file=f)
-            yield subm
+def out_submissions(subms, file):
+    for subm in subms:
+        d = submission_to_dict(subm)
+        j = json.dumps(d)
+        print(j, file=file)
+        yield subm
 
 
-def out_comments(comms, filename):
-    with open(filename, 'w', encoding='utf-8') as f:
-        for comm in comms:
-            d = comment_to_dict(comm)
-            j = json.dumps(d)
-            print(j, file=f)
-            yield comm
+def out_comments(comms, file):
+    for comm in comms:
+        d = comment_to_dict(comm)
+        j = json.dumps(d)
+        print(j, file=file)
+        yield comm
 
 
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument('subreddits', nargs='+')
     p.add_argument('time')
-    p.add_argument('-c', '--out-comment', default='comments.jsonl')
+    p.add_argument(
+        '-c', '--out-comment', nargs='?', const='comments.jsonl', default='')
     p.add_argument('-s', '--out-submission', default='submissions.jsonl')
 
     a = p.parse_args()
@@ -162,10 +161,25 @@ def main():
     out_c = args.out_comment
     out_s = args.out_submission
 
+    class F:
+
+        def __enter__(self):
+            pass
+
+        def __exit__(self, *args):
+            pass
+
+    if out_c:
+        cf = open(out_c, 'w', encoding='utf-8')
+    else:
+        cf = F()
+
     subms = get_submissions(subreddits, begin, end)
-    for c in out_comments(
-            chain.from_iterable(get_comments(s) for s in out_submissions(subms, out_s)), out_c):
-        pass
+    with open(out_s, 'w', encoding='utf-8') as sf, cf:
+        for subm in out_submissions(subms, sf):
+            if out_c:
+                for c in out_comments(get_comments(subm), cf):
+                    pass
 
 
 if __name__ == '__main__':
