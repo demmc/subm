@@ -3,6 +3,7 @@ import argparse
 import json
 import pathlib
 import os
+import sys
 
 import arrow
 import praw
@@ -195,6 +196,23 @@ class CSVWriter(Writer):
     def write(self, d):
         self.writer.writerow(d)
 
+class Progress:
+
+    def __init__(self, begin, end):
+        self.begin = begin
+        self.end = end
+        self.num = 0
+
+    def update(self, at):
+        self.num += 1
+        all_width = self.end - self.begin
+
+        estimate = (all_width / (self.end - at)) * self.num
+
+        sys.stderr.write(
+            '\rrest {:^10d}/{:^10d}'.format(self.num, int(estimate)))
+        sys.stderr.flush()
+
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -239,12 +257,14 @@ def main():
     else:
         c_out = JSONWriter(c_file)
 
+    prog = Progress(begin, end)
     with s_out, c_out:
         subms = get_submissions(subreddits, begin, end)
         for subm in out_submissions(subms, s_out):
             if c_out_file:
                 for c in out_comments(get_comments(subm), c_out):
                     pass
+            prog.update(arrow.get(subm.created_utc))
 
 
 if __name__ == '__main__':
