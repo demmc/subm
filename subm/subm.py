@@ -2,6 +2,7 @@ import csv
 import argparse
 import json
 import pathlib
+import os
 
 import arrow
 import praw
@@ -245,19 +246,11 @@ def main():
     c_out_file = args.out_comment
     s_out_file = args.out_submission
 
-    class Dummy:
-
-        def __enter__(self):
-            pass
-
-        def __exit__(self, *args):
-            pass
-
     s_file = open(s_out_file, 'w', encoding='utf-8')
     if c_out_file:
         c_file = open(c_out_file, 'w', encoding='utf-8')
     else:
-        c_file = Dummy()
+        c_file = open(os.devnull, 'w')
 
     if pathlib.Path(s_out_file).suffix == '.csv':
         s_out = CSVWriter(submission_keys, s_file)
