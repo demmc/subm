@@ -1,7 +1,5 @@
 import csv
 import argparse
-import json
-import pathlib
 import os
 import sys
 
@@ -183,13 +181,6 @@ class Writer:
         self.file.close()
 
 
-class JSONWriter(Writer):
-
-    def write(self, d):
-        j = json.dumps(d)
-        print(j, file=self.file)
-
-
 class CSVWriter(Writer):
 
     def __init__(self, fields, file):
@@ -226,9 +217,9 @@ def parse_args():
     p.add_argument('time',
                    help='submission period (example: "2015-09-08", "2015-09-02,2015-09-12")')
     p.add_argument('-c', '--comment', nargs='?', const='comments.csv', default='', metavar='FILE',
-                   help='file stores comments data. If not provided, it is not requested. If FILE not provided, default file is "%(const)s". If suffix is not ".csv", output format is jsonlines.')
+                   help='file stores comments data. If not provided, it is not requested. If FILE not provided, default file is "%(const)s".')
     p.add_argument('-s', '--submission', default='submissions.csv', metavar='FILE',
-                   help='file stores submissions data. (default: "%(default)s"). If suffix is not ".csv", output format is jsonlines.')
+                   help='file stores submissions data. (default: "%(default)s").')
 
     a = p.parse_args()
     return a
@@ -255,15 +246,8 @@ def main():
     else:
         c_file = open(os.devnull, 'w')
 
-    if pathlib.Path(s_out_file).suffix == '.csv':
-        s_out = CSVWriter(submission_keys, s_file)
-    else:
-        s_out = JSONWriter(s_file)
-
-    if pathlib.Path(c_out_file).suffix == '.csv':
-        c_out = CSVWriter(comment_keys, c_file)
-    else:
-        c_out = JSONWriter(c_file)
+    s_out = CSVWriter(submission_keys, s_file)
+    c_out = CSVWriter(comment_keys, c_file)
 
     prog = Progress(begin, end)
     with s_out, c_out:
