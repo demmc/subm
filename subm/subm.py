@@ -1,6 +1,5 @@
 import csv
 import argparse
-import os
 import sys
 
 import arrow
@@ -181,6 +180,18 @@ class Writer:
         self.file.close()
 
 
+class NullWriter(Writer):
+
+    def __init__(self):
+        pass
+
+    def write(self, d):
+        pass
+
+    def __exit__(self, *args):
+        pass
+
+
 class CSVWriter(Writer):
 
     def __init__(self, fields, file):
@@ -208,6 +219,15 @@ class Progress:
         sys.stderr.write(
             '\rrest {:^10d}/{:^10d}'.format(self.num, int(estimate)))
         sys.stderr.flush()
+
+
+def download(subreddits, begin, end, s_out, c_out, progress, is_comment):
+    subms = get_submissions(subreddits, begin, end)
+    for subm in out_submissions(subms, s_out):
+        if is_comment:
+            for c in out_comments(get_comments(subm), c_out):
+                pass
+        progress.update(arrow.get(subm.created_utc))
 
 
 def parse_args():
@@ -239,25 +259,19 @@ def main():
     subreddits = args.subreddit
     c_out_file = args.comment
     s_out_file = args.submission
+    is_comment = bool(c_out_file)
 
     s_file = open(s_out_file, 'w', encoding='utf-8', newline='')
+    s_out = CSVWriter(submission_keys, s_file)
     if c_out_file:
         c_file = open(c_out_file, 'w', encoding='utf-8', newline='')
+        c_out = CSVWriter(comment_keys, c_file)
     else:
-        c_file = open(os.devnull, 'w')
-
-    s_out = CSVWriter(submission_keys, s_file)
-    c_out = CSVWriter(comment_keys, c_file)
+        c_out = NullWriter()
 
     prog = Progress(begin, end)
     with s_out, c_out:
-        subms = get_submissions(subreddits, begin, end)
-        for subm in out_submissions(subms, s_out):
-            if c_out_file:
-                for c in out_comments(get_comments(subm), c_out):
-                    pass
-            prog.update(arrow.get(subm.created_utc))
-
+        download(subreddits, begin, end, s_out, c_out, prog, is_comment)
 
 if __name__ == '__main__':
     main()
