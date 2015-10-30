@@ -43,6 +43,7 @@ def get_submissions(subreddits, begin, end):
         subms = reddit.search(
             query, subrs, sort='new', limit=1000, syntax='cloudsearch')
 
+        subms = sorted(subms, key=lambda s: s.created)
         for s in subms:
             if begin.timestamp <= s.created_utc <= end.timestamp:
                 yield s
@@ -222,29 +223,30 @@ class CSVWriter(Writer):
 
 class Progress:
 
-    def __init__(self, begin, end):
-        self.begin = begin
-        self.end = end
+    def __init__(self, max_value, width):
+        self.max_value = max_value
+        self.width = width
         self.num = 0
 
-    def update(self, at):
+    def update(self, now):
         self.num += 1
-        all_width = self.end - self.begin
+        done = int(round(now / self.max_value * self.width))
+        blank = self.width - done
 
-        estimate = (all_width / (self.end - at)) * self.num
-
-        sys.stderr.write(
-            '\rrest {:^10d}/{:^10d}'.format(self.num, int(estimate)))
+        bar = '[{}{}] {}'.format('=' * done, ' ' * blank, self.num)
+        sys.stderr.write('\r' + bar)
         sys.stderr.flush()
 
 
-def download(subreddits, begin, end, s_out, c_out, progress, is_comment):
+def download(subreddits, begin, end, s_out, c_out, is_comment):
+    max_value = end.timestamp - begin.timestamp
+    progress = Progress(max_value, 50)
     subms = get_submissions(subreddits, begin, end)
     for subm in out_submissions(subms, s_out):
         if is_comment:
             for c in out_comments(get_comments(subm), c_out):
                 pass
-        progress.update(arrow.get(subm.created_utc))
+        progress.update(subm.created_utc - begin.timestamp)
 
 
 def parse_args():
@@ -286,9 +288,8 @@ def main():
     else:
         c_out = NullWriter()
 
-    prog = Progress(begin, end)
     with s_out, c_out:
-        download(subreddits, begin, end, s_out, c_out, prog, is_comment)
+        download(subreddits, begin, end, s_out, c_out, is_comment)
 
 if __name__ == '__main__':
     main()
