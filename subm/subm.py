@@ -1,6 +1,7 @@
 import csv
 import argparse
 import sys
+from datetime import timedelta
 
 import arrow
 import praw
@@ -11,30 +12,40 @@ VERSION = '0.0.1'
 reddit = praw.Reddit(user_agent='subm/{}'.format(VERSION))
 
 
+def split_time(begin, end, delta):
+    a = begin + timedelta(seconds=1)  # avoid overlap
+    b = begin + delta
+    while True:
+        if end < b:
+            b = end
+        yield a, b
+
+        if end <= b:
+            return
+
+        a += delta
+        b += delta
+
+
 def get_submissions(subreddits, begin, end):
     assert begin < end
     # 期間をしても過不足のある結果が帰ってくるため範囲を大きめに指定する
     a_begin, a_end = begin.replace(days=-1), end.replace(days=+1)
     subrs = '+'.join(subreddits)
 
-    created_set = set()
-    while True:
-        query = 'timestamp:{}..{}'.format(a_begin.timestamp, a_end.timestamp)
+    # TODO: 単位時間あたり1000件以上あった場合にその分取得漏れしてしまう.
+    # TODO: 単位時間あたりの取得可能件数 OR リクエスト数が制限されている模様.
+    #       適宜スリープを入れる.
+    for a, b in split_time(a_begin, a_end, timedelta(days=1)):
+        query = 'timestamp:{}..{}'.format(a.timestamp, b.timestamp)
+
+        # 700, 800件目程度を取得しようとするとうまくいかないことがある.
         subms = reddit.search(
             query, subrs, sort='new', limit=1000, syntax='cloudsearch')
 
-        subms = list(subms)
-        no_content = True
         for s in subms:
             if begin.timestamp <= s.created_utc <= end.timestamp:
-                no_content = False
-                created_set.add(s.created_utc)
                 yield s
-
-        if no_content:
-            return
-
-        a_end = arrow.get(min(created_set))
 
 
 def get_comments(subm):
