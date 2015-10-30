@@ -17,18 +17,24 @@ def get_submissions(subreddits, begin, end):
     a_begin, a_end = begin.replace(days=-1), end.replace(days=+1)
     subrs = '+'.join(subreddits)
 
+    created_set = set()
     while True:
         query = 'timestamp:{}..{}'.format(a_begin.timestamp, a_end.timestamp)
         subms = reddit.search(
             query, subrs, sort='new', limit=1000, syntax='cloudsearch')
 
+        subms = list(subms)
+        no_content = True
         for s in subms:
             if begin.timestamp <= s.created_utc <= end.timestamp:
+                no_content = False
+                created_set.add(s.created_utc)
                 yield s
-        else:
+
+        if no_content:
             return
 
-        a_end = arrow.get(min(subms, key=lambda s: s.created_utc).created_utc)
+        a_end = arrow.get(min(created_set))
 
 
 def get_comments(subm):
