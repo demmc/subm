@@ -6,6 +6,7 @@ from datetime import timedelta
 import arrow
 import praw
 from praw.helpers import flatten_tree
+from retry.api import retry_call
 
 
 VERSION = '0.0.1'
@@ -49,8 +50,24 @@ def get_submissions(subreddits, begin, end):
                 yield s
 
 
+class ServerError(Exception):
+    pass
+
+
+def more_comments(subm):
+    try:
+        return subm.replace_more_comments(limit=None)
+    except praw.errors.HTTPException as e:
+        if not any(c in str(e) for c in ('502', '503', '504', '522')):
+            raise  # http error (example: Forbidden, NotFound)
+        raise ServerError(str(e))  # 5XX error
+
+
 def get_comments(subm):
-    subm.replace_more_comments(limit=None)
+    retry_call(more_comments, fargs=(subm,),
+               exceptions=(ServerError,),
+               delay=60, jitter=60, max_delay=60 * 5)
+
     comms = subm.comments
     flatten_comms = flatten_tree(comms)
     return flatten_comms
