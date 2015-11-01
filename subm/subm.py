@@ -76,13 +76,17 @@ def get_comments(subm):
 
 def submission_to_dict(subm):
     attrs = [
+        'author_flair_css_class',
         'author_flair_text',
         'created',
         'created_utc',
         'domain',
         'id',
         'is_self',
+        'link_flair_css_class',
         'link_flair_text',
+        'media',
+        'media_embed',
         'name',
         'num_comments',
         'over_18',
@@ -108,6 +112,7 @@ def submission_to_dict(subm):
 
 submission_keys = sorted([
     'author',
+    'author_flair_css_class',
     'author_flair_text',
     'created',
     'created_utc',
@@ -116,7 +121,10 @@ submission_keys = sorted([
     'edited',
     'id',
     'is_self',
+    'link_flair_css_class',
     'link_flair_text',
+    'media',
+    'media_embed',
     'name',
     'num_comments',
     'over_18',
@@ -134,6 +142,7 @@ submission_keys = sorted([
 
 def comment_to_dict(comm):
     attrs = [
+        'author_flair_css_class',
         'author_flair_text',
         'body',
         'body_html',
@@ -165,6 +174,7 @@ def comment_to_dict(comm):
 
 comment_keys = sorted([
     'author',
+    'author_flair_css_class',
     'author_flair_text',
     'body',
     'body_html',
