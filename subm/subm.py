@@ -44,9 +44,10 @@ def get_submissions(subreddits, begin, end):
         subms = reddit.search(
             query, subrs, sort='new', limit=1000, syntax='cloudsearch')
 
-        subms = sorted(subms, key=lambda s: s.created)
+        subms = sorted(subms, key=lambda s: s.created_utc)
         for s in subms:
             if begin.timestamp <= s.created_utc <= end.timestamp:
+                # `s.created` is shifted slightly in the compared with local
                 yield s
 
 
@@ -276,21 +277,27 @@ def parse_args():
                    help='file stores comments data. If not provided, it is not requested. If FILE not provided, default file is "%(const)s".')
     p.add_argument('-s', '--submission', default='submissions.csv', metavar='FILE',
                    help='file stores submissions data. (default: "%(default)s").')
+    p.add_argument('--timezone', default='local', help='`time`\'s timezone. The default is %(default)s. (example: "+09:00", "utc")')
 
     a = p.parse_args()
     return a
+
+
+def parse_time(time_str, tzinfo):
+    return arrow.get(time_str, 'YYYY-MM-DD').replace(tzinfo=tzinfo)
 
 
 def main():
     args = parse_args()
 
     time = args.time
+    tz = args.timezone
     if ',' in time:
         times = time.split(',')
-        begin = arrow.get(times[0], 'YYYY-MM-DD').floor('day')
-        end = arrow.get(times[1], 'YYYY-MM-DD').ceil('day')
+        begin = parse_time(times[0], tz).floor('day')
+        end = parse_time(times[1], tz).ceil('day')
     else:
-        begin, end = arrow.get(time, 'YYYY-MM-DD').span('day')
+        begin, end = parse_time(time, tz).span('day')
 
     subreddits = args.subreddit
     c_out_file = args.comment
