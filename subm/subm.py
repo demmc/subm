@@ -140,6 +140,8 @@ submission_keys = sorted([
     'title',
     'url',
 ])
+# keys that are not menthoned(clicked, hidden, likes, saved)
+# are for logged in users.
 
 
 def comment_to_dict(comm):
@@ -197,6 +199,8 @@ comment_keys = sorted([
     'score_hidden',
     'subreddit',
 ])
+# keys that are not mentioned(approved_by, banned_by, likes, replies, saved)
+# are for logged in or mod users.
 
 
 def out_submissions(subms, writer):
