@@ -332,4 +332,12 @@ def main():
         download(subreddits, begin, end, s_out, c_out, is_comment)
 
 if __name__ == '__main__':
+    # we can safety ignore these warnings.
+    # see https://github.com/praw-dev/praw/issues/329
+    import warnings
+    warnings.filterwarnings('ignore', message=r'unclosed <ssl\.SSLSocket',
+                            category=ResourceWarning)
+    warnings.filterwarnings('ignore', message=r'sys\.meta_path is empty',
+                            category=ImportWarning)
+
     main()
