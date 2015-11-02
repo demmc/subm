@@ -5,9 +5,11 @@ from subm.subm import VERSION
 
 setup(
     name='subm',
+    author='demmc',
     version=VERSION,
     description='A tool downloads reddit data',
     license='GPL',
+    url='https://github.com/demmc/subm',
     classifiers=[
         'Programming Language :: Python :: 3',
     ],
