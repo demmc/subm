@@ -106,6 +106,9 @@ def submission_to_dict(subm):
     for a in attrs:
         ret[a] = getattr(subm, a)
 
+    if not ret['media_embed']:
+        ret['media_embed'] = None  # delete empty dict
+
     ret['subreddit'] = subm.subreddit.display_name
     ret['author'] = subm.author.name
 
