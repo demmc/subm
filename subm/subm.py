@@ -7,6 +7,7 @@ import arrow
 import praw
 from praw.helpers import flatten_tree
 from retry.api import retry_call
+from requests.exceptions import ReadTimeout
 
 
 VERSION = '0.0.1'
@@ -66,7 +67,7 @@ def more_comments(subm):
 
 def get_comments(subm):
     retry_call(more_comments, fargs=(subm,),
-               exceptions=(ServerError,),
+               exceptions=(ServerError, ReadTimeout),
                delay=60, jitter=60, max_delay=60 * 5)
 
     comms = subm.comments
