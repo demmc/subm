@@ -174,6 +174,8 @@ def comment_to_dict(comm):
     ret['subreddit'] = subm.subreddit.display_name
 
     ret['author'] = comm.author.name if comm.author else None
+
+    ret['replies'] = ' '.join(r.name for r in comm.replies)
     return ret
 
 comment_keys = sorted([
@@ -195,11 +197,12 @@ comment_keys = sorted([
     'link_url',
     'num_reports',
     'parent_id',
+    'replies',
     'score',
     'score_hidden',
     'subreddit',
 ])
-# keys that are not mentioned(approved_by, banned_by, likes, replies, saved)
+# keys that are not mentioned(approved_by, banned_by, likes, saved)
 # are for logged in or mod users.
 
 
