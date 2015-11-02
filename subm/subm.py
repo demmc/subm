@@ -301,6 +301,7 @@ def parse_args():
     p.add_argument('-s', '--submission', default='submissions.csv', metavar='FILE',
                    help='file stores submissions data. (default: "%(default)s").')
     p.add_argument('--timezone', default='local', help='`time`\'s timezone. The default is %(default)s. (example: "+09:00", "utc")')
+    p.add_argument('-e', '--encoding', default='utf-8', help='output encoding (default: "%(default)s")')
 
     a = p.parse_args()
     return a
@@ -326,11 +327,12 @@ def main():
     c_out_file = args.comment
     s_out_file = args.submission
     is_comment = bool(c_out_file)
+    encoding = args.encoding
 
-    s_file = open(s_out_file, 'w', encoding='utf-8', newline='')
+    s_file = open(s_out_file, 'w', encoding=encoding, newline='')
     s_out = CSVWriter(submission_keys, s_file)
     if c_out_file:
-        c_file = open(c_out_file, 'w', encoding='utf-8', newline='')
+        c_file = open(c_out_file, 'w', encoding=encoding, newline='')
         c_out = CSVWriter(comment_keys, c_file)
     else:
         c_out = NullWriter()
