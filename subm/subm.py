@@ -6,6 +6,7 @@ from datetime import timedelta
 import arrow
 import praw
 from praw.helpers import flatten_tree
+from praw.errors import HTTPException, Forbidden, NotFound
 from retry.api import retry_call
 from requests.exceptions import ReadTimeout
 
@@ -59,10 +60,11 @@ class ServerError(Exception):
 def more_comments(subm):
     try:
         return subm.replace_more_comments(limit=None)
-    except praw.errors.HTTPException as e:
-        if not any(c in str(e) for c in ('502', '503', '504', '522')):
-            raise  # http error (example: Forbidden, NotFound)
-        raise ServerError(str(e))  # 5XX error
+    except HTTPException as e:
+        if isinstance(e, (Forbidden, NotFound)):
+            raise
+        status = e._raw.status_code  # XXX: access private field
+        raise ServerError('http error occurs in status={}'.format(status))
 
 
 def get_comments(subm):
