@@ -58,20 +58,23 @@ class ServerError(Exception):
     pass
 
 
-def more_comments(subm):
-    try:
-        return subm.replace_more_comments(limit=None)
-    except HTTPException as e:
-        if isinstance(e, (Forbidden, NotFound)):
-            raise
-        status = e._raw.status_code  # XXX: access private field
-        raise ServerError('http error occurs in status={}'.format(status))
+def request_with_retry(func, *args, **kwds):
+    def request_wrapper():
+        try:
+            return func(*args, **kwds)
+        except HTTPException as e:
+            if isinstance(e, (Forbidden, NotFound)):
+                raise
+            status = e._raw.status_code  # XXX: access private field
+            raise ServerError('http error occurs in status={}'.format(status))
+
+    return retry_call(request_wrapper,
+                      exceptions=(ServerError, ReadTimeout),
+                      delay=60, jitter=60, max_delay=60 * 5)
 
 
 def get_comments(subm):
-    retry_call(more_comments, fargs=(subm,),
-               exceptions=(ServerError, ReadTimeout),
-               delay=60, jitter=60, max_delay=60 * 5)
+    request_with_retry(subm.replace_more_comments, limit=None)
 
     comms = subm.comments
     flatten_comms = flatten_tree(comms)
@@ -258,7 +261,6 @@ def download(subreddits, begin, end, subm_writer, comm_writer, is_comment):
         for c in comms:
             comm_d = comment_to_dict(c)
             comm_writer.write(comm_d)
-
 
 
 def parse_args():
