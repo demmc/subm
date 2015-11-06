@@ -2,6 +2,7 @@ import csv
 import argparse
 import sys
 from datetime import timedelta
+import os
 
 import arrow
 import praw
@@ -212,53 +213,11 @@ comment_keys = sorted([
 # are for logged in or mod users.
 
 
-def out_submissions(subms, writer):
-    for subm in subms:
-        d = submission_to_dict(subm)
-        writer.write(d)
-        yield subm
-
-
-def out_comments(comms, writer):
-    for comm in comms:
-        d = comment_to_dict(comm)
-        writer.write(d)
-        yield comm
-
-
-class Writer:
-
-    def __init__(self, file):
-        self.file = file
-
-    def write(self, d):
-        raise NotImplemented
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, *args):
-        self.file.close()
-
-
-class NullWriter(Writer):
-
-    def __init__(self):
-        pass
-
-    def write(self, d):
-        pass
-
-    def __exit__(self, *args):
-        pass
-
-
-class CSVWriter(Writer):
+class CSVWriter:
 
     def __init__(self, fields, file):
         self.writer = csv.DictWriter(file, fields)
         self.writer.writeheader()
-        super().__init__(file)
 
     def write(self, d):
         self.writer.writerow(d)
@@ -281,15 +240,25 @@ class Progress:
         sys.stderr.flush()
 
 
-def download(subreddits, begin, end, s_out, c_out, is_comment):
+def download(subreddits, begin, end, subm_writer, comm_writer, is_comment):
     max_value = end.timestamp - begin.timestamp
     progress = Progress(max_value, 50)
+
     subms = get_submissions(subreddits, begin, end)
-    for subm in out_submissions(subms, s_out):
-        if is_comment:
-            for c in out_comments(get_comments(subm), c_out):
-                pass
+    for subm in subms:
+        subm_d = submission_to_dict(subm)
+        subm_writer.write(subm_d)
+
         progress.update(subm.created_utc - begin.timestamp)
+
+        if not is_comment:
+            continue
+
+        comms = get_comments(subm)
+        for c in comms:
+            comm_d = comment_to_dict(c)
+            comm_writer.write(comm_d)
+
 
 
 def parse_args():
@@ -332,12 +301,13 @@ def main():
     encoding = args.encoding
 
     s_file = open(s_out_file, 'w', encoding=encoding, newline='')
-    s_out = CSVWriter(submission_keys, s_file)
+    subm_writer = CSVWriter(submission_keys, s_file)
     if c_out_file:
         c_file = open(c_out_file, 'w', encoding=encoding, newline='')
-        c_out = CSVWriter(comment_keys, c_file)
+        comm_writer = CSVWriter(comment_keys, c_file)
     else:
-        c_out = NullWriter()
+        c_file = open(os.devnull, 'w')
+        comm_writer = None
 
     # we can safety ignore these warnings.
     # see https://github.com/praw-dev/praw/issues/329
@@ -347,8 +317,8 @@ def main():
     warnings.filterwarnings('ignore', message=r'sys\.meta_path is empty',
                             category=ImportWarning)
 
-    with s_out, c_out:
-        download(subreddits, begin, end, s_out, c_out, is_comment)
+    with s_file, c_file:
+        download(subreddits, begin, end, subm_writer, comm_writer, is_comment)
 
 
 if __name__ == '__main__':
