@@ -33,10 +33,13 @@ def split_time(begin, end, delta):
 
 def get_submissions(subreddits, begin, end):
     assert begin < end
-    # 期間をしても過不足のある結果が帰ってくるため範囲を大きめに指定する
-    a_begin, a_end = begin.replace(days=-1), end.replace(days=+1)
-    subrs = '+'.join(subreddits)
 
+    # There is timestamp offset in cloudsearch syntax.
+    # In order to make up for it , extend the period .
+    # see https://www.reddit.com/r/redditdev/comments/1r5wqx/is_the_timestamp_off_by_8_hours_in_cloudsearch
+    a_begin, a_end = begin.replace(days=-1), end.replace(days=+1)
+
+    subrs = '+'.join(subreddits)
     # TODO: When it was 1,000 or more per unit time , leak acquired .
     for a, b in split_time(a_begin, a_end, timedelta(days=1)):
         query = 'timestamp:{}..{}'.format(a.timestamp, b.timestamp)
