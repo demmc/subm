@@ -16,19 +16,26 @@ VERSION = '0.0.1'
 reddit = praw.Reddit(user_agent='subm/{}'.format(VERSION))
 
 
-def split_time(begin, end, delta):
-    a = begin + timedelta(seconds=1)  # avoid overlap
-    b = begin + delta
-    while True:
-        if end < b:
-            b = end
-        yield a, b
+class SplitTime:
 
-        if end <= b:
-            return
+    def __init__(self, begin, end):
+        self._at = begin + timedelta(days=1)  # avoid overlap
+        self._end = end
+        self._is_end = False
 
-        a += delta
-        b += delta
+    def next_time(self, delta):
+        begin = self._at
+        end = begin + delta
+        if self._end <= end:
+            end = self._end
+            self._is_end = True
+
+        self._at = begin + delta
+
+        return begin, end
+
+    def is_end(self):
+        return self._is_end
 
 
 def get_submissions(subreddits, begin, end):
@@ -41,7 +48,11 @@ def get_submissions(subreddits, begin, end):
 
     subrs = '+'.join(subreddits)
     # TODO: When it was 1,000 or more per unit time , leak acquired .
-    for a, b in split_time(a_begin, a_end, timedelta(days=1)):
+    times = SplitTime(a_begin, a_end)
+    delta = timedelta(days=1)
+    while not times.is_end():
+        a, b = times.next_time(delta)
+
         query = 'timestamp:{}..{}'.format(a.timestamp, b.timestamp)
 
         # For more than 900 , there are data not returned.
@@ -53,6 +64,16 @@ def get_submissions(subreddits, begin, end):
             if begin.timestamp <= s.created_utc <= end.timestamp:
                 # `s.created` is shifted slightly in the compared with local
                 yield s
+
+        # estimate the just the period
+        per_day = len(subms) // (delta.days or 1)  # avoid zero division
+        if not subms or per_day == 0:
+            # the number of subm per day is unknown
+            delta = timedelta(days=3)
+        elif per_day > 400:
+            delta = timedelta(days=1)
+        else:
+            delta = timedelta(days=min(7, 400 // per_day))
 
 
 class ServerError(Exception):
