@@ -3,6 +3,7 @@ import argparse
 import sys
 from datetime import timedelta
 import os
+import logging
 
 import arrow
 import praw
@@ -14,6 +15,7 @@ from requests.exceptions import ReadTimeout
 
 VERSION = '0.0.1'
 reddit = praw.Reddit(user_agent='subm/{}'.format(VERSION))
+logger = logging.getLogger(__name__)
 
 
 class SplitTime:
@@ -94,7 +96,7 @@ def request_with_retry(func, *args, **kwds):
 
     return retry_call(request_wrapper,
                       exceptions=(ServerError, ReadTimeout),
-                      delay=60, jitter=60, max_delay=60 * 5)
+                      delay=60, jitter=60, max_delay=60 * 5, logger=logger)
 
 
 def get_comments(subm):
