@@ -55,9 +55,11 @@ def get_submissions(subreddits, begin, end):
 
         query = 'timestamp:{}..{}'.format(a.timestamp, b.timestamp)
 
-        # For more than 900 , there are data not returned.
-        subms = request_with_retry(reddit.search, query, subrs,
-                                   sort='new', limit=1000, syntax='cloudsearch')
+        def search():  # for lazy loading
+            # For more than 900 , there are data not returned.
+            subms = reddit.search(query, subrs, sort='new', limit=1000, syntax='cloudsearch')
+            return list(subms)
+        subms = request_with_retry(search)
 
         subms = sorted(subms, key=lambda s: s.created_utc)
         for s in subms:
