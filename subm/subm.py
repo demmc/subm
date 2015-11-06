@@ -268,6 +268,11 @@ class Progress:
         sys.stderr.write('\r' + bar)
         sys.stderr.flush()
 
+    def finish(self):
+        bar = '[{}] {}'.format('=' * self.width, self.num)
+        sys.stderr.write('\r' + bar + '\n')
+        sys.stderr.flush()
+
 
 def download(subreddits, begin, end, subm_writer, comm_writer, is_comment):
     max_value = end.timestamp - begin.timestamp
@@ -287,6 +292,8 @@ def download(subreddits, begin, end, subm_writer, comm_writer, is_comment):
         for c in comms:
             comm_d = comment_to_dict(c)
             comm_writer.write(comm_d)
+
+    progress.finish()
 
 
 def parse_args():
