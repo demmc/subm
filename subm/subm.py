@@ -38,12 +38,10 @@ def get_submissions(subreddits, begin, end):
     subrs = '+'.join(subreddits)
 
     # TODO: When it was 1,000 or more per unit time , leak acquired .
-    # TODO: 単位時間あたりの取得可能件数 OR リクエスト数が制限されている模様.
-    #       適宜スリープを入れる.
     for a, b in split_time(a_begin, a_end, timedelta(days=1)):
         query = 'timestamp:{}..{}'.format(a.timestamp, b.timestamp)
 
-        # 700, 800件目程度を取得しようとするとうまくいかないことがある.
+        # For more than 900 , there are data not returned.
         subms = request_with_retry(reddit.search, query, subrs,
                                    sort='new', limit=1000, syntax='cloudsearch')
 
