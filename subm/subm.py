@@ -37,7 +37,7 @@ def get_submissions(subreddits, begin, end):
     a_begin, a_end = begin.replace(days=-1), end.replace(days=+1)
     subrs = '+'.join(subreddits)
 
-    # TODO: 単位時間あたり1000件以上あった場合にその分取得漏れしてしまう.
+    # TODO: When it was 1,000 or more per unit time , leak acquired .
     # TODO: 単位時間あたりの取得可能件数 OR リクエスト数が制限されている模様.
     #       適宜スリープを入れる.
     for a, b in split_time(a_begin, a_end, timedelta(days=1)):
