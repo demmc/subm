@@ -44,8 +44,8 @@ def get_submissions(subreddits, begin, end):
         query = 'timestamp:{}..{}'.format(a.timestamp, b.timestamp)
 
         # 700, 800件目程度を取得しようとするとうまくいかないことがある.
-        subms = reddit.search(
-            query, subrs, sort='new', limit=1000, syntax='cloudsearch')
+        subms = request_with_retry(reddit.search, query, subrs,
+                                   sort='new', limit=1000, syntax='cloudsearch')
 
         subms = sorted(subms, key=lambda s: s.created_utc)
         for s in subms:
