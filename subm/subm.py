@@ -307,6 +307,7 @@ def parse_args():
                    help='file stores submissions data. (default: "%(default)s").')
     p.add_argument('--timezone', default='local', help='`time`\'s timezone. The default is %(default)s. (example: "+09:00", "utc")')
     p.add_argument('-e', '--encoding', default='utf-8', help='output encoding (default: "%(default)s")')
+    p.add_argument('--version', action='version', version='subm ' + VERSION)
 
     a = p.parse_args()
     return a
