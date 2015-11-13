@@ -301,7 +301,7 @@ def parse_args():
         description='A tool downloads reddit\'s submissions and comments')
     p.add_argument('subreddit', nargs='+', help='target subreddits')
     p.add_argument('time',
-                   help='submission period (example: "2015-09-08", "2015-09-02,2015-09-12")')
+                   help='submission period (example: "20150908" "2015-9-8", "2015-09-02,2015-09-12", "0908", "9-12")')
     p.add_argument('-c', '--comment', nargs='?', const='comments.csv', default='', metavar='FILE',
                    help='file stores comments data. If not provided, it is not requested. If FILE not provided, default file is "%(const)s".')
     p.add_argument('-s', '--submission', default='submissions.csv', metavar='FILE',
@@ -314,7 +314,19 @@ def parse_args():
 
 
 def parse_time(time_str, tzinfo):
-    return arrow.get(time_str, 'YYYY-MM-DD').replace(tzinfo=tzinfo)
+    fmts = [
+        'YYYY-M-D',
+        'YYYYMMDD',
+        'M-D',
+        'MMDD',
+    ]
+    day = arrow.get(time_str, fmts)
+
+    if day.year == 1:
+        year = arrow.get().replace(tzinfo=tzinfo).year
+        day = day.replace(year=year)
+
+    return day.replace(tzinfo=tzinfo)
 
 
 def main():
@@ -323,7 +335,7 @@ def main():
     time = args.time
     tz = args.timezone
     if ',' in time:
-        times = time.split(',')
+        times = [t.strip() for t in time.split(',')]
         begin = parse_time(times[0], tz).floor('day')
         end = parse_time(times[1], tz).ceil('day')
     else:
