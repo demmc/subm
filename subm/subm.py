@@ -40,7 +40,7 @@ class SplitTime:
         return self._is_end
 
 
-def get_submissions(subreddits, begin, end):
+def get_submissions(subreddit, begin, end):
     assert begin < end
 
     # There is timestamp offset in cloudsearch syntax.
@@ -48,7 +48,6 @@ def get_submissions(subreddits, begin, end):
     # see https://www.reddit.com/r/redditdev/comments/1r5wqx/is_the_timestamp_off_by_8_hours_in_cloudsearch
     a_begin, a_end = begin.replace(days=-1), end.replace(days=+1)
 
-    subrs = '+'.join(subreddits)
     # TODO: When it was 1,000 or more per unit time , leak acquired .
     times = SplitTime(a_begin, a_end)
     delta = timedelta(days=1)
@@ -59,7 +58,7 @@ def get_submissions(subreddits, begin, end):
 
         def search():  # for lazy loading
             # For more than 900 , there are data not returned.
-            subms = reddit.search(query, subrs, sort='new', limit=1000, syntax='cloudsearch')
+            subms = reddit.search(query, subreddit, sort='new', limit=1000, syntax='cloudsearch')
             return list(subms)
         subms = request_with_retry(search)
 
@@ -274,11 +273,11 @@ class Progress:
         sys.stderr.flush()
 
 
-def download(subreddits, begin, end, subm_writer, comm_writer, is_comment):
+def download(subreddit, begin, end, subm_writer, comm_writer, is_comment):
     max_value = end.timestamp - begin.timestamp
     progress = Progress(max_value, 50)
 
-    subms = get_submissions(subreddits, begin, end)
+    subms = get_submissions(subreddit, begin, end)
     for subm in subms:
         subm_d = submission_to_dict(subm)
         subm_writer.write(subm_d)
@@ -299,7 +298,7 @@ def download(subreddits, begin, end, subm_writer, comm_writer, is_comment):
 def parse_args():
     p = argparse.ArgumentParser(
         description='A tool downloads reddit\'s submissions and comments')
-    p.add_argument('subreddit', nargs='+', help='target subreddits')
+    p.add_argument('subreddit', help='target subreddit (example: "news", "gif+funny")')
     p.add_argument('time',
                    help='submission period (example: "20150908" "2015-9-8", "2015-09-02,2015-09-12", "0908", "9-12")')
     p.add_argument('-c', '--comment', nargs='?', const='comments.csv', default='', metavar='FILE',
@@ -341,7 +340,7 @@ def main():
     else:
         begin, end = parse_time(time, tz).span('day')
 
-    subreddits = args.subreddit
+    subreddit = args.subreddit
     c_out_file = args.comment
     s_out_file = args.submission
     is_comment = bool(c_out_file)
@@ -365,7 +364,7 @@ def main():
                             category=ImportWarning)
 
     with s_file, c_file:
-        download(subreddits, begin, end, subm_writer, comm_writer, is_comment)
+        download(subreddit, begin, end, subm_writer, comm_writer, is_comment)
 
 
 if __name__ == '__main__':
