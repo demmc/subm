@@ -13,7 +13,7 @@ from retry.api import retry_call
 from requests.exceptions import ReadTimeout
 
 
-VERSION = '0.0.1'
+VERSION = '0.1.0'
 reddit = praw.Reddit(user_agent='subm/{}'.format(VERSION))
 logger = logging.getLogger(__name__)
 
