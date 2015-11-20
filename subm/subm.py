@@ -10,7 +10,7 @@ import praw
 from praw.helpers import flatten_tree
 from praw.errors import HTTPException, Forbidden, NotFound
 from retry.api import retry_call
-from requests.exceptions import ReadTimeout
+from requests.exceptions import Timeout
 
 
 VERSION = '0.1.0'
@@ -94,7 +94,7 @@ def request_with_retry(func, *args, **kwds):
             raise ServerError('http error occurs in status={}'.format(status))
 
     return retry_call(request_wrapper,
-                      exceptions=(ServerError, ReadTimeout),
+                      exceptions=(ServerError, Timeout),
                       delay=60, jitter=60, max_delay=60 * 5, logger=logger)
 
 
