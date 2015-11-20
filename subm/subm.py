@@ -73,10 +73,10 @@ def get_submissions(subreddit, begin, end):
         if not subms or per_day == 0:
             # the number of subm per day is unknown
             delta = timedelta(days=3)
-        elif per_day > 400:
+        elif per_day > 100:  # 100 is the maximum value in a time of request
             delta = timedelta(days=1)
         else:
-            delta = timedelta(days=min(7, 400 // per_day))
+            delta = timedelta(days=min(7, 100 // per_day))
 
 
 class ServerError(Exception):
