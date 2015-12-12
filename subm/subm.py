@@ -108,6 +108,9 @@ def get_comments(subm):
 
 
 class JSONEncoder(json.JSONEncoder):
+    # if compact_replies is True, Comment's replies have Comment objects.
+    # otherwise Comment's replies have Comment names.
+    compact_replies = False
 
     def default(self, o):
         if isinstance(o, Submission):
@@ -122,7 +125,10 @@ class JSONEncoder(json.JSONEncoder):
             if isinstance(replies, dict) and replies:
                 d = dict(d)  # dont touch original dict
                 children = replies['data']['children']
-                d['replies'] = children
+                if self.compact_replies:
+                    d['replies'] = [c.name for c in children]
+                else:
+                    d['replies'] = children
 
             return d
 
@@ -155,6 +161,7 @@ def parse_args():
     p.add_argument('time',
                    help='submission period (example: "20150908" "2015-9-8", "2015-09-02,2015-09-12", "0908", "9-12")')
     p.add_argument('-c', '--comment', action='store_true', help='get comments also')
+    p.add_argument('--compact-replies', action='store_true', help='Comment\'s replies have only the object name (example: t1_dk58b9)')
     p.add_argument('--timezone', default='local', help='`time`\'s timezone. The default is %(default)s. (example: "+09:00", "utc")')
     p.add_argument('--version', action='version', version='subm ' + VERSION)
 
@@ -193,6 +200,7 @@ def main():
     subreddit = args.subreddit
     is_comment = args.comment
     output = sys.stdout
+    JSONEncoder.compact_replies = args.compact_replies
 
     # we can safety ignore these warnings.
     # see https://github.com/praw-dev/praw/issues/329
