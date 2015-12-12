@@ -1,20 +1,21 @@
-import csv
 import argparse
 import sys
 from datetime import timedelta
-import os
 import logging
+import json
 
 import arrow
 import praw
 from praw.helpers import flatten_tree
 from praw.errors import HTTPException, Forbidden, NotFound
+from praw.objects import Submission, Comment
 from retry.api import retry_call
 from requests.exceptions import Timeout
 
 
 VERSION = '0.1.1'
-reddit = praw.Reddit(user_agent='subm/{}'.format(VERSION))
+reddit = praw.Reddit(user_agent='subm/{}'.format(VERSION),
+                     store_json_result='true')
 logger = logging.getLogger(__name__)
 
 
@@ -106,193 +107,45 @@ def get_comments(subm):
     return flatten_comms
 
 
-def submission_to_dict(subm):
-    attrs = [
-        'author_flair_css_class',
-        'author_flair_text',
-        'created',
-        'created_utc',
-        'domain',
-        'id',
-        'is_self',
-        'link_flair_css_class',
-        'link_flair_text',
-        'locked',
-        'media',
-        'media_embed',
-        'name',
-        'num_comments',
-        'over_18',
-        'permalink',
-        'score',
-        'selftext',
-        'selftext_html',
-        'thumbnail',
-        'title',
-        'url',
-        'edited',
-        'distinguished',
-        'stickied',
-    ]
-    ret = {}
-    for a in attrs:
-        ret[a] = getattr(subm, a)
+class JSONEncoder(json.JSONEncoder):
 
-    if not ret['media_embed']:
-        ret['media_embed'] = None  # delete empty dict
+    def default(self, o):
+        if isinstance(o, Submission):
+            d = o.json_dict
+            return d
 
-    ret['subreddit'] = subm.subreddit.display_name
-    ret['author'] = subm.author.name
+        if isinstance(o, Comment):
+            d = o.json_dict
 
-    return ret
+            # remove api meta data
+            replies = d.get('replies')
+            if isinstance(replies, dict) and replies:
+                d = dict(d)  # dont touch original dict
+                children = replies['data']['children']
+                d['replies'] = children
 
-submission_keys = sorted([
-    'author',
-    'author_flair_css_class',
-    'author_flair_text',
-    'created',
-    'created_utc',
-    'domain',
-    'distinguished',
-    'edited',
-    'id',
-    'is_self',
-    'link_flair_css_class',
-    'link_flair_text',
-    'locked',
-    'media',
-    'media_embed',
-    'name',
-    'num_comments',
-    'over_18',
-    'permalink',
-    'score',
-    'selftext',
-    'selftext_html',
-    'stickied',
-    'subreddit',
-    'thumbnail',
-    'title',
-    'url',
-])
-# keys that are not menthoned(clicked, hidden, likes, saved)
-# are for logged in users.
+            return d
+
+        return super().default(o)
 
 
-def comment_to_dict(comm):
-    attrs = [
-        'author_flair_css_class',
-        'author_flair_text',
-        'body',
-        'body_html',
-        'created',
-        'created_utc',
-        'edited',
-        'gilded',
-        'id',
-        'name',
-        'num_reports',
-        'parent_id',
-        'score',
-        'score_hidden',
-        'distinguished',
-    ]
-    ret = {}
-    for a in attrs:
-        ret[a] = getattr(comm, a)
-
-    subm = comm.submission
-    ret['link_author'] = subm.author.name
-    ret['link_id'] = subm.id
-    ret['link_title'] = subm.title
-    ret['link_url'] = subm.url
-    ret['subreddit'] = subm.subreddit.display_name
-
-    ret['author'] = comm.author.name if comm.author else None
-
-    ret['replies'] = ' '.join(r.name for r in comm.replies)
-    return ret
-
-comment_keys = sorted([
-    'author',
-    'author_flair_css_class',
-    'author_flair_text',
-    'body',
-    'body_html',
-    'created',
-    'created_utc',
-    'distinguished',
-    'edited',
-    'gilded',
-    'id',
-    'name',
-    'link_author',
-    'link_id',
-    'link_title',
-    'link_url',
-    'num_reports',
-    'parent_id',
-    'replies',
-    'score',
-    'score_hidden',
-    'subreddit',
-])
-# keys that are not mentioned(approved_by, banned_by, likes, saved)
-# are for logged in or mod users.
+def to_json(obj):
+    return json.dumps(obj, sort_keys=True, cls=JSONEncoder)
 
 
-class CSVWriter:
-
-    def __init__(self, fields, file):
-        self.writer = csv.DictWriter(file, fields)
-        self.writer.writeheader()
-
-    def write(self, d):
-        self.writer.writerow(d)
-
-
-class Progress:
-
-    def __init__(self, max_value, width):
-        self.max_value = max_value
-        self.width = width
-        self.num = 0
-
-    def update(self, now):
-        self.num += 1
-        done = int(round(now / self.max_value * self.width))
-        blank = self.width - done
-
-        bar = '[{}{}] {}'.format('=' * done, ' ' * blank, self.num)
-        sys.stderr.write('\r' + bar)
-        sys.stderr.flush()
-
-    def finish(self):
-        bar = '[{}] {}'.format('=' * self.width, self.num)
-        sys.stderr.write('\r' + bar + '\n')
-        sys.stderr.flush()
-
-
-def download(subreddit, begin, end, subm_writer, comm_writer, is_comment):
-    max_value = end.timestamp - begin.timestamp
-    progress = Progress(max_value, 50)
-
+def download(subreddit, begin, end, output, is_comment):
     subms = get_submissions(subreddit, begin, end)
     for subm in subms:
-        subm_d = submission_to_dict(subm)
-        subm_writer.write(subm_d)
-
-        progress.update(subm.created_utc - begin.timestamp)
+        subm_d = to_json(subm)
+        print(subm_d, file=output)
 
         if not is_comment:
             continue
 
         comms = get_comments(subm)
-        for c in comms:
-            comm_d = comment_to_dict(c)
-            comm_writer.write(comm_d)
-
-    progress.finish()
+        for comm in comms:
+            comm_d = to_json(comm)
+            print(comm_d, file=output)
 
 
 def parse_args():
@@ -301,12 +154,8 @@ def parse_args():
     p.add_argument('subreddit', help='target subreddit (example: "news", "gif+funny")')
     p.add_argument('time',
                    help='submission period (example: "20150908" "2015-9-8", "2015-09-02,2015-09-12", "0908", "9-12")')
-    p.add_argument('-c', '--comment', nargs='?', const='comments.csv', default='', metavar='FILE',
-                   help='file stores comments data. If not provided, it is not requested. If FILE not provided, default file is "%(const)s".')
-    p.add_argument('-s', '--submission', default='submissions.csv', metavar='FILE',
-                   help='file stores submissions data. (default: "%(default)s").')
+    p.add_argument('-c', '--comment', action='store_true', help='get comments also')
     p.add_argument('--timezone', default='local', help='`time`\'s timezone. The default is %(default)s. (example: "+09:00", "utc")')
-    p.add_argument('-e', '--encoding', default='utf-8', help='output encoding (default: "%(default)s")')
     p.add_argument('--version', action='version', version='subm ' + VERSION)
 
     a = p.parse_args()
@@ -342,19 +191,8 @@ def main():
         begin, end = parse_time(time, tz).span('day')
 
     subreddit = args.subreddit
-    c_out_file = args.comment
-    s_out_file = args.submission
-    is_comment = bool(c_out_file)
-    encoding = args.encoding
-
-    s_file = open(s_out_file, 'w', encoding=encoding, newline='')
-    subm_writer = CSVWriter(submission_keys, s_file)
-    if c_out_file:
-        c_file = open(c_out_file, 'w', encoding=encoding, newline='')
-        comm_writer = CSVWriter(comment_keys, c_file)
-    else:
-        c_file = open(os.devnull, 'w')
-        comm_writer = None
+    is_comment = args.comment
+    output = sys.stdout
 
     # we can safety ignore these warnings.
     # see https://github.com/praw-dev/praw/issues/329
@@ -364,8 +202,8 @@ def main():
     warnings.filterwarnings('ignore', message=r'sys\.meta_path is empty',
                             category=ImportWarning)
 
-    with s_file, c_file:
-        download(subreddit, begin, end, subm_writer, comm_writer, is_comment)
+    with output:
+        download(subreddit, begin, end, output, is_comment)
 
 
 if __name__ == '__main__':
