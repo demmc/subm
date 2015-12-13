@@ -185,6 +185,19 @@ def parse_time(time_str, tzinfo):
     return day.replace(tzinfo=tzinfo)
 
 
+def justify_period(subreddit, begin, end):
+    if end - begin > timedelta(days=3):
+        subr = reddit.get_subreddit(subreddit)
+        begin_s = subr.created_utc
+
+        if begin.timestamp < begin_s:
+            begin = arrow.get(begin_s)
+            if end <= begin:
+                return None, None  # no period
+
+    return begin, end
+
+
 def main():
     args = parse_args()
 
@@ -201,6 +214,10 @@ def main():
     is_comment = args.comment
     output = sys.stdout
     JSONEncoder.compact_replies = args.compact_replies
+
+    begin, end = justify_period(subreddit, begin, end)
+    if begin is None:
+        return  # no period
 
     # we can safety ignore these warnings.
     # see https://github.com/praw-dev/praw/issues/329
