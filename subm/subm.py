@@ -44,6 +44,11 @@ class SplitTime:
 def get_submissions(subreddit, begin, end):
     assert begin < end
 
+    unit_days, subms = estimate_period_unit(subreddit, begin, end)
+    if subms is not None:
+        yield from subms
+        return
+
     # There is timestamp offset in cloudsearch syntax.
     # In order to make up for it , extend the period .
     # see https://www.reddit.com/r/redditdev/comments/1r5wqx/is_the_timestamp_off_by_8_hours_in_cloudsearch
@@ -51,7 +56,7 @@ def get_submissions(subreddit, begin, end):
 
     # TODO: When it was 1,000 or more per unit time , leak acquired .
     times = SplitTime(a_begin, a_end)
-    delta = timedelta(days=1)
+    delta = timedelta(days=unit_days)
     while not times.is_end():
         a, b = times.next_time(delta)
 
@@ -73,11 +78,35 @@ def get_submissions(subreddit, begin, end):
         per_day = len(subms) // (delta.days or 1)  # avoid zero division
         if not subms or per_day == 0:
             # the number of subm per day is unknown
-            delta = timedelta(days=3)
+            delta = timedelta(days=unit_days)
         elif per_day > 100:  # 100 is the maximum value in a time of request
             delta = timedelta(days=1)
         else:
-            delta = timedelta(days=min(7, 100 // per_day))
+            delta = timedelta(days=min(unit_days, 100 // per_day))
+
+
+def estimate_period_unit(subreddit, begin, end):
+    subr = reddit.get_subreddit(subreddit)
+
+    def created(s): return s.created_utc
+
+    def get_new():
+        return sorted(subr.get_new(limit=100), key=created)
+    subms = request_with_retry(get_new)
+
+    if len(subms) < 100:
+        # tiny subreddit
+        ret = [s for s in subms if begin < arrow.get(s.created_utc) < end]
+        return None, ret
+
+    latest = max(subms, key=created)
+    oldest = min(subms, key=created)
+    term = timedelta(seconds=latest.created_utc - oldest.created_utc)
+    if term.days == 0:
+        # per day, the number of submissions is greater than 100
+        return 1, None
+
+    return term.days, None
 
 
 class ServerError(Exception):
