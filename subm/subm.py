@@ -7,7 +7,7 @@ import json
 import arrow
 import praw
 from praw.helpers import flatten_tree
-from praw.errors import HTTPException, Forbidden, NotFound
+from praw.errors import HTTPException, Forbidden, NotFound, InvalidSubreddit
 from praw.objects import Submission, Comment
 from retry.api import retry_call
 from requests.exceptions import Timeout
@@ -215,10 +215,6 @@ def main():
     output = sys.stdout
     JSONEncoder.compact_replies = args.compact_replies
 
-    begin, end = justify_period(subreddit, begin, end)
-    if begin is None:
-        return  # no period
-
     # we can safety ignore these warnings.
     # see https://github.com/praw-dev/praw/issues/329
     import warnings
@@ -227,9 +223,21 @@ def main():
     warnings.filterwarnings('ignore', message=r'sys\.meta_path is empty',
                             category=ImportWarning)
 
-    with output:
-        download(subreddit, begin, end, output, is_comment)
+    try:
+        begin, end = justify_period(subreddit, begin, end)
+        if begin is None:
+            return  # no period
 
+        with output:
+            download(subreddit, begin, end, output, is_comment)
+    except (NotFound, InvalidSubreddit):
+        print('not found:', subreddit, file=sys.stderr)
+    except Forbidden:
+        print('forbidden:', subreddit, file=sys.stderr)
+    else:
+        return
+
+    sys.exit(1)
 
 if __name__ == '__main__':
     main()
