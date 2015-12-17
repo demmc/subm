@@ -8,7 +8,7 @@ setup(
     author='demmc',
     version=VERSION,
     description='A tool downloads reddit data',
-    license='GPL',
+    license='MIT',
     url='https://github.com/demmc/subm',
     classifiers=[
         'Programming Language :: Python :: 3',
