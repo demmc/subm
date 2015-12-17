@@ -186,7 +186,7 @@ def download(subreddit, begin, end, output, is_comment):
 def parse_args():
     p = argparse.ArgumentParser(
         description='A tool downloads reddit\'s submissions and comments')
-    p.add_argument('subreddit', help='target subreddit (example: "news", "gif+funny")')
+    p.add_argument('subreddit', help='target subreddit (example: "news")')
     p.add_argument('time',
                    help='submission period (example: "20150908" "2015-9-8", "2015-09-02,2015-09-12", "0908", "9-12")')
     p.add_argument('-c', '--comment', action='store_true', help='get comments also')
@@ -227,6 +227,10 @@ def justify_period(subreddit, begin, end):
     return begin, end
 
 
+def error(*msgs):
+    print('error:' + str(msgs[0]), *msgs[1:], file=sys.stderr)
+
+
 def main():
     args = parse_args()
 
@@ -244,6 +248,10 @@ def main():
     output = sys.stdout
     JSONEncoder.compact_replies = args.compact_replies
 
+    if '+' in subreddit:
+        error('multireddit is not handled')
+        sys.exit(1)
+
     # we can safety ignore these warnings.
     # see https://github.com/praw-dev/praw/issues/329
     import warnings
@@ -260,9 +268,9 @@ def main():
         with output:
             download(subreddit, begin, end, output, is_comment)
     except (NotFound, InvalidSubreddit):
-        print('not found:', subreddit, file=sys.stderr)
+        error('not found:', subreddit)
     except Forbidden:
-        print('forbidden:', subreddit, file=sys.stderr)
+        error('forbidden:', subreddit)
     else:
         return
 
