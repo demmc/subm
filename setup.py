@@ -1,7 +1,9 @@
+import re
 from setuptools import setup, find_packages
 
-from subm.subm import VERSION
-
+with open('subm/subm.py', encoding='utf-8') as f:
+    version_line = [line for line in f if 'VERSION = ' in line][0]
+    VERSION = re.search(r'[0-9.a-z]+', version_line).group(0).strip("' ")
 
 setup(
     name='subm',
