@@ -17,7 +17,7 @@ setup(
     ],
     keywords='reddit',
     packages=find_packages(),
-    install_requires=['arrow', 'retry', 'praw'],
+    install_requires=['arrow', 'retry', 'praw<4'],
     entry_points={
         'console_scripts': [
             'subm=subm:subm.main',
