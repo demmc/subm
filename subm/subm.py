@@ -15,7 +15,8 @@ from requests.exceptions import Timeout
 
 VERSION = '0.2.0'
 reddit = praw.Reddit(user_agent='subm/{}'.format(VERSION),
-                     store_json_result='true')
+                     store_json_result='true',
+                     check_for_updates=False)
 logger = logging.getLogger(__name__)
 
 
